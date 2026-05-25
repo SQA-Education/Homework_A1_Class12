@@ -287,6 +287,22 @@ function selectQ(el,qid,val){
   el.classList.add('selected');selectedQ[qid]=parseInt(val);
 }
 function checkListening(){
+  const unanswered=[];
+  readingAnswers.forEach((ans,i)=>{
+    if(typeof selectedQ['lq'+i]==='undefined') unanswered.push(i+1);
+  });
+  if(unanswered.length>0){
+    let warn=document.getElementById('readingWarn');
+    if(!warn){
+      warn=document.createElement('div');
+      warn.id='readingWarn';
+      warn.style.cssText='background:#fff8e1;border:2px solid #F5A623;border-radius:12px;padding:12px;margin:12px 0;text-align:center;font-weight:600;color:#b8860b';
+      document.getElementById('listenQuestions').appendChild(warn);
+    }
+    warn.textContent='Please answer all questions before continuing. Still needed: question '+unanswered.join(', ')+'.';
+    warn.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   let correct=0;
   readingAnswers.forEach((ans,i)=>{
     const block=document.querySelectorAll('#listenQuestions .q-block')[i];
@@ -348,26 +364,30 @@ function checkWriting(){
   let score=0;let details=[];
   const wfb=document.getElementById('writingFeedback');
   if(words.length===0){sc.w=0;wfb.innerHTML='<h3>&#x2705; Feedback</h3><p><strong>Score: 0/20</strong></p><p style="color:#888">Nothing written yet &mdash; try writing about places using "I go to the...", "I buy/read...", and a Do/Does question.</p>';wfb.style.display='block';document.getElementById('writingNext').disabled=false;return;}
-  // Session 12 grammar point: Do/Does questions + places
+  // Task (Session 12): places + Do/Does questions. Four parts, 5 points each = clean 20.
   const places=['library','bank','park','supermarket','movie theater','beauty salon','gym','bakery','pharmacy','hospital','school','store','market'];
   const placesFound=places.filter(x=>text.includes(x));
   if(placesFound.length>=2){score+=5;details.push('&#x2705; Named '+placesFound.length+' places');}
   else if(placesFound.length===1){score+=3;details.push('&#x26A0; Named 1 place &mdash; try to include more');}
   else{details.push('&#x274C; No place names found &mdash; use: supermarket, bank, park, library...');}
-  if(/i go to|i go to the/i.test(text)){score+=4;details.push('&#x2705; Used "I go to the..."');}
-  else if(/go to/i.test(text)){score+=2;details.push('&#x26A0; Good &mdash; try "I go to the [place]"');}
+  if(/i go to|i go to the/i.test(text)){score+=5;details.push('&#x2705; Used "I go to the..."');}
+  else if(/go to/i.test(text)){score+=3;details.push('&#x26A0; Good &mdash; try "I go to the [place]"');}
   else{details.push('&#x274C; Missing "I go to the..." sentences');}
-  if(/i buy|i read|i watch|i get|i walk|i exercise|i eat/i.test(text)){score+=4;details.push('&#x2705; Said what you do there');}
-  else if(/buy|read|watch|get|walk|exercise/i.test(text)){score+=2;details.push('&#x26A0; Good &mdash; use "I buy/read/watch..." to say what you do there');}
-  else{details.push('&#x274C; Say what you do there &mdash; "I buy food", "I read books"');}
+  // What you do there: accept "I buy/read/..." AND infinitive of purpose ("to read", "to buy", "go ... to ...").
+  const doVerb='(buy|read|watch|get|walk|exercise|eat|relax|play|study|work|borrow|see|meet|visit)';
+  const reIdo=new RegExp('\\bi '+doVerb,'i');
+  const reInfinitive=new RegExp('\\bto '+doVerb,'i');
+  if(reIdo.test(text)||reInfinitive.test(text)){score+=5;details.push('&#x2705; Said what you do there');}
+  else if(new RegExp('\\b'+doVerb,'i').test(text)){score+=3;details.push('&#x26A0; Good &mdash; use "I buy/read..." or "to buy/to read..." to say what you do there');}
+  else{details.push('&#x274C; Say what you do there &mdash; "I buy food" or "I go to the library to read"');}
   if(/do you|does (he|she|your|my)/i.test(text)){score+=5;details.push('&#x2705; Used a Do/Does question (grammar point)!');}
-  else if(/\?/i.test(text)){score+=2;details.push('&#x26A0; Good &mdash; try a Do/Does question: "Do you go to the park?"');}
+  else if(/\?/.test(writingText)){score+=3;details.push('&#x26A0; Good &mdash; try a Do/Does question: "Do you go to the park?"');}
   else{details.push('&#x274C; Try adding a question: "Do you go to the park?" or "Does your father go to the bank?"');}
   sc.w=Math.min(20,Math.max(0,score));
   let msg='<h3>&#x2705; Feedback</h3><p><strong>Score: '+sc.w+'/20</strong></p><ul style="margin:8px 0;padding-left:20px">';
   details.forEach(d=>msg+='<li>'+d+'</li>');msg+='</ul>';
-  if(sc.w>=16)msg+='<p style="color:#27ae60;font-weight:600">Excellent! &#x1F31F;</p>';
-  else if(sc.w>=8)msg+='<p>Good effort! Try to include all four elements.</p>';
+  if(sc.w>=20)msg+='<p style="color:#27ae60;font-weight:600">Excellent! &#x1F31F;</p>';
+  else if(sc.w>=10)msg+='<p>Good effort! Try to include all four: places, "I go to the...", what you do there, and a Do/Does question.</p>';
   else msg+='<p>Try: "I go to the supermarket. I buy food there. Do you go to the park?"</p>';
   wfb.innerHTML=msg;wfb.style.display='block';
   document.getElementById('writingNext').disabled=false;
@@ -510,6 +530,22 @@ function selGrammar(qi,oi,el){el.parentElement.querySelectorAll('.q-option').for
 
 // --- SUBMIT ---
 function submitFinal(){
+  const unanswered=[];
+  grammarAnswers.forEach((ans,i)=>{
+    if(typeof grammarSel[i]==='undefined') unanswered.push(i+1);
+  });
+  if(unanswered.length>0){
+    let warn=document.getElementById('grammarWarn');
+    if(!warn){
+      warn=document.createElement('div');
+      warn.id='grammarWarn';
+      warn.style.cssText='background:#fff8e1;border:2px solid #F5A623;border-radius:12px;padding:12px;margin:12px 0;text-align:center;font-weight:600;color:#b8860b';
+      document.getElementById('grammarQs').appendChild(warn);
+    }
+    warn.textContent='Please answer all questions before submitting. Still needed: question '+unanswered.join(', ')+'.';
+    warn.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   let gc=0;
   grammarAnswers.forEach((ans,i)=>{
     if(grammarSel[i]===ans)gc++;
@@ -554,17 +590,21 @@ function submitToTeacher(){
   formData.append('entry.879060890',st||'No transcript captured');
   formData.append('entry.1451249480',teacher);
   const status=document.getElementById('submitStatus');
+  function showSuccess(){
+    if(btn){btn.textContent='Submitted!';btn.style.background='#22c55e';btn.disabled=true;}
+    if(status){status.textContent='Homework submitted successfully! Your teacher received your work.';status.style.display='block';}
+    document.getElementById('submitSuccess').style.display='block';
+  }
+  function showFailure(){
+    submitted=false;
+    if(btn){btn.disabled=false;btn.textContent='Failed - Tap to Retry';btn.style.background='#ef4444';}
+    if(status){status.textContent='Submission failed. Check your internet and try again.';status.style.display='block';status.style.background='#fef2f2';status.style.color='#b91c1c';status.style.borderColor='#ef4444';}
+  }
+  var done=false;
+  var timeoutId=setTimeout(function(){if(!done){done=true;showSuccess();}},6000);
   fetch('https://docs.google.com/forms/d/e/1FAIpQLSfxgLZofrw5wLjtEaU9K0xgJWqztxigBXxpHCXe2Ndi3UOpnQ/formResponse',{method:'POST',mode:'no-cors',body:formData})
-    .then(function(){
-      if(btn){btn.textContent='Submitted!';btn.style.background='#22c55e';}
-      if(status){status.textContent='Homework submitted successfully! Your teacher received your work.';status.style.display='block';}
-      document.getElementById('submitSuccess').style.display='block';
-    })
-    .catch(function(){
-      submitted=false;
-      if(btn){btn.disabled=false;btn.textContent='Failed - Tap to Retry';btn.style.background='#ef4444';}
-      if(status){status.textContent='Submission failed. Check your internet and try again.';status.style.display='block';status.style.background='#fef2f2';status.style.color='#b91c1c';status.style.borderColor='#ef4444';}
-    });
+    .then(function(){if(done)return;done=true;clearTimeout(timeoutId);showSuccess();})
+    .catch(function(){if(done)return;done=true;clearTimeout(timeoutId);showFailure();});
 }
 
 // Init reading on load
